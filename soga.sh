@@ -17,7 +17,7 @@ fi
 if [[ -f /etc/alpine-release ]]; then
     release="alpine"
 else
-    echo -e "${red}未检测到Alpine系统，请联系脚本作者！${plain}\n"
+    echo -e "${red}本脚本仅适用Alpine，其他系统请使用官方脚本安装${plain}\n"
     exit 1
 fi
 
@@ -49,7 +49,7 @@ update() {
     bash <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh) "$version"
 
     if [[ $? -eq 0 ]]; then
-        echo -e "${green}更新完成，已自动重启 soga，请使用 soga log 查看运行日志${plain}"
+        echo -e "${green}更新完成，已自动重启 soga，如节点未上线请查看配置文件${plain}"
         exit 0
     else
         echo -e "${red}更新失败，请检查错误信息！${plain}"
@@ -118,14 +118,6 @@ disable() {
     fi
 }
 
-show_log() {
-    if [[ -f /var/log/soga.log ]]; then
-        tail -f /var/log/soga.log
-    else
-        echo -e "${red}日志文件 /var/log/soga.log 不存在${plain}"
-    fi
-}
-
 update_shell() {
     wget -O /usr/bin/soga -N --no-check-certificate https://raw.githubusercontent.com/Arsierl/alpinesoga/main/soga.sh
     if [[ $? -ne 0 ]]; then
@@ -166,10 +158,9 @@ show_menu() {
   ${green}4.${plain} 启动 soga
   ${green}5.${plain} 停止 soga
   ${green}6.${plain} 重启 soga
-  ${green}7.${plain} 查看 soga 日志
-  ${green}8.${plain} 设置 soga 开机自启
-  ${green}9.${plain} 取消 soga 开机自启
-  ${green}10.${plain} 查看 soga 状态
+  ${green}7.${plain} 设置 soga 开机自启
+  ${green}8.${plain} 取消 soga 开机自启
+  ${green}9.${plain} 查看 soga 状态
  "
     read -p "请输入选择 [0-10]: " num
 
@@ -181,10 +172,9 @@ show_menu() {
         4) start ;;
         5) stop ;;
         6) restart ;;
-        7) show_log ;;
-        8) enable ;;
-        9) disable ;;
-        10) show_status ;;
+        7) enable ;;
+        8) disable ;;
+        9) show_status ;;
         *) echo -e "${red}请输入正确的数字 [0-10]${plain}" ;;
     esac
 }
@@ -196,7 +186,6 @@ if [[ $# -gt 0 ]]; then
         restart) restart ;;
         enable) enable ;;
         disable) disable ;;
-        log) show_log ;;
         update) update ;;
         config) config "$@" ;;
         install) install ;;

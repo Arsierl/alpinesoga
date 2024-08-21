@@ -50,7 +50,7 @@ update() {
     # 判断是否为最新版本
     if [[ "$version" == "latest" ]]; then
         echo -e "${yellow}正在下载最新版本的 soga...${plain}"
-        url="https://github.com/vaxilu/soga/releases/latest/download/soga-linux-${arch}.tar.gz"
+        url="https://github.com/vaxilu/soga/releases/download/latest/soga-linux-${arch}.tar.gz"
     else
         echo -e "${yellow}正在下载指定版本的 soga...${plain}"
         url="https://github.com/vaxilu/soga/releases/download/${version}/soga-linux-${arch}.tar.gz"

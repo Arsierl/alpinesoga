@@ -22,59 +22,47 @@ else
 fi
 
 confirm() {
-    local prompt default reply
-    prompt="$1"
-    default="$2"
+    if [ $# -gt 1 ]; then
+        echo && read -p "$1 [默认$2]: " temp
+        [ -z "$temp" ] && temp=$2
+    else
+        read -p "$1 [y/n]: " temp
+    fi
+    [ "$temp" = "y" ] || [ "$temp" = "Y" ] && return 0 || return 1
+}
 
-    echo && read -p "$prompt [默认$default]: " reply
-    reply="${reply:-$default}"
+confirm_restart() {
+    confirm "是否重启soga" "y"
+    if [ $? -eq 0 ]; then
+        restart
+    else
+        show_menu
+    fi
+}
 
-    [[ $reply =~ ^[Yy]$ ]] && return 0 || return 1
+before_show_menu() {
+    echo && echo -n -e "${yellow}按回车返回主菜单: ${plain}" && read temp
+    show_menu
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh)
-    if [[ $? -eq 0 ]]; then
-        start
-    else
-        echo -e "${red}安装失败，请检查错误信息！${plain}"
-        exit 1
-    fi
+    sh <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh)
+    [ $? -eq 0 ] && ( [ $# -eq 0 ] && start || start 0 )
 }
 
 update() {
-    # 获取指定版本或使用默认的 "latest"
-    read -p "输入指定版本(默认最新版): " version
-    version="${version:-latest}"
-
-    # 判断是否为最新版本
-    if [[ "$version" == "latest" ]]; then
-        echo -e "${yellow}正在下载最新版本的 soga...${plain}"
-        url="https://github.com/vaxilu/soga/releases/download/latest/soga-linux-${arch}.tar.gz"
+    if [ $# -eq 0 ]; then
+        echo && echo -n -e "输入指定版本(默认最新版): " && read version
     else
-        echo -e "${yellow}正在下载指定版本的 soga...${plain}"
-        url="https://github.com/vaxilu/soga/releases/download/${version}/soga-linux-${arch}.tar.gz"
+        version=$2
+    fi
+    sh <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh) $version
+    if [ $? -eq 0 ]; then
+        echo -e "${green}更新完成，已自动重启 soga，已自动重启 soga。如节点未上线请检查配置文件${plain}"
+        exit
     fi
 
-    # 下载 soga
-    wget -N --no-check-certificate -O /usr/local/soga.tar.gz "$url"
-
-    if [[ $? -ne 0 ]]; then
-        echo -e "${red}下载 soga 失败，请确保此版本存在${plain}"
-        exit 1
-    fi
-
-    tar zxvf /usr/local/soga.tar.gz -C /usr/local/
-    rm /usr/local/soga.tar.gz
-
-    # 检查是否成功
-    if [[ $? -eq 0 ]]; then
-        echo -e "${green}更新完成，已自动重启 soga。如节点未上线请查看配置文件${plain}"
-        exit 0
-    else
-        echo -e "${red}更新失败，请检查错误信息！${plain}"
-        exit 1
-    fi
+    [ $# -eq 0 ] && before_show_menu
 }
 
 config() {
@@ -82,85 +70,165 @@ config() {
 }
 
 uninstall() {
-    if confirm "确定要卸载 soga 吗?" "n"; then
-        rc-service soga stop
-        rc-update del soga
-        rm -f /etc/init.d/soga
-        rm -rf /etc/soga/ /usr/local/soga/
-        echo -e "${green}卸载成功${plain}"
-    else
-        echo -e "${yellow}卸载已取消${plain}"
+    confirm "确定要卸载 soga 吗?" "n"
+    if [ $? -ne 0 ]; then
+        [ $# -eq 0 ] && show_menu
+        return 0
     fi
+    service soga stop
+    rc-update del soga
+    rm /etc/init.d/soga -f
+    rm /etc/soga/ -rf
+    rm /usr/local/soga/ -rf
+
+    echo ""
+    echo -e "卸载成功，如果你想删除此脚本，则退出脚本后运行 ${green}rm /usr/bin/soga -f${plain} 进行删除"
+    echo ""
+
+    [ $# -eq 0 ] && before_show_menu
 }
 
 start() {
-    rc-service soga start
-    if check_status; then
-        echo -e "${green}soga 启动成功${plain}"
+    check_status
+    if [ $? -eq 0 ]; then
+        echo ""
+        echo -e "${green}soga已运行，无需再次启动，如需重启请选择重启${plain}"
     else
-        echo -e "${red}soga 启动失败${plain}"
+        service soga start
+        sleep 2
+        check_status
+        if [ $? -eq 0 ]; then
+            echo -e "${green}soga 启动成功，如节点未上线请检查配置文件${plain}"
+        else
+            echo -e "${red}soga可能启动失败，请检查配置文件${plain}"
+        fi
     fi
+
+    [ $# -eq 0 ] && before_show_menu
 }
 
 stop() {
-    rc-service soga stop
-    if ! check_status; then
+    service soga stop
+    sleep 2
+    check_status
+    if [ $? -eq 1 ]; then
         echo -e "${green}soga 停止成功${plain}"
     else
-        echo -e "${red}soga 停止失败${plain}"
+        echo -e "${red}soga停止失败，可能是因为停止时间超过了两秒，请检查配置文件${plain}"
     fi
+
+    [ $# -eq 0 ] && before_show_menu
 }
 
 restart() {
-    rc-service soga restart
-    if check_status; then
-        echo -e "${green}soga 重启成功${plain}"
+    service soga restart
+    sleep 2
+    check_status
+    if [ $? -eq 0 ]; then
+        echo -e "${green}soga 重启成功，如节点未上线请检查配置文件${plain}"
     else
-        echo -e "${red}soga 重启失败${plain}"
+        echo -e "${red}soga可能启动失败，请检查配置文件${plain}"
     fi
+    [ $# -eq 0 ] && before_show_menu
 }
 
 enable() {
-    rc-update add soga
-    if [[ $? -eq 0 ]]; then
+    rc-update add soga default
+    if [ $? -eq 0 ]; then
         echo -e "${green}soga 设置开机自启成功${plain}"
     else
         echo -e "${red}soga 设置开机自启失败${plain}"
     fi
+
+    [ $# -eq 0 ] && before_show_menu
 }
 
 disable() {
     rc-update del soga
-    if [[ $? -eq 0 ]]; then
+    if [ $? -eq 0 ]; then
         echo -e "${green}soga 取消开机自启成功${plain}"
     else
         echo -e "${red}soga 取消开机自启失败${plain}"
     fi
+
+    [ $# -eq 0 ] && before_show_menu
+}
+
+show_log() {
+    tail -f /var/log/soga.log
+    [ $# -eq 0 ] && before_show_menu
 }
 
 update_shell() {
     wget -O /usr/bin/soga -N --no-check-certificate https://raw.githubusercontent.com/Arsierl/alpinesoga/main/soga.sh
-    if [[ $? -ne 0 ]]; then
+    if [ $? -ne 0 ]; then
+        echo ""
         echo -e "${red}下载脚本失败，请检查本机能否连接 Github${plain}"
+        before_show_menu
     else
         chmod +x /usr/bin/soga
-        echo -e "${green}升级脚本成功，请重新运行脚本${plain}"
-        exit 0
+        echo -e "${green}升级脚本成功，请重新运行脚本${plain}" && exit 0
     fi
 }
 
+# 0: running, 1: not running, 2: not installed
 check_status() {
-    rc-service soga status | grep -q "started"
+    [ ! -f /etc/init.d/soga ] && return 2
+    if pgrep -x "soga" > /dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+check_enabled() {
+    rc-status | grep -q 'soga'
+    [ $? -eq 0 ] && return 0 || return 1
+}
+
+check_uninstall() {
+    check_status
+    if [ $? -ne 2 ]; then
+        echo ""
+        echo -e "${red}soga已安装，请不要重复安装${plain}"
+        [ $# -eq 0 ] && before_show_menu
+        return 1
+    else
+        return 0
+    fi
+}
+
+check_install() {
+    check_status
+    if [ $? -eq 2 ]; then
+        echo ""
+        echo -e "${red}请先安装soga${plain}"
+        [ $# -eq 0 ] && before_show_menu
+        return 1
+    else
+        return 0
+    fi
 }
 
 show_status() {
-    if check_status; then
-        echo -e "soga状态: ${green}已运行${plain}"
-    else
-        echo -e "soga状态: ${red}未运行${plain}"
-    fi
+    check_status
+    case $? in
+        0)
+            echo -e "soga状态: ${green}已运行${plain}"
+            show_enable_status
+            ;;
+        1)
+            echo -e "soga状态: ${yellow}未运行${plain}"
+            show_enable_status
+            ;;
+        2)
+            echo -e "soga状态: ${red}未安装${plain}"
+    esac
+}
 
-    if rc-update show | grep -q "soga"; then
+show_enable_status() {
+    check_enabled
+    if [ $? -eq 0 ]; then
         echo -e "是否开机自启: ${green}是${plain}"
     else
         echo -e "是否开机自启: ${red}否${plain}"

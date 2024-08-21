@@ -151,7 +151,7 @@ EOF
     if [[ ! -f /etc/soga/routes.toml ]]; then
         cp routes.toml /etc/soga/
     fi
-    curl -o /usr/bin/soga -Ls https://github.com/Arsierl/alpinesoga/blob/main/soga.sh
+    curl -o /usr/bin/soga -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/
     chmod +x /usr/bin/soga
     curl -o /usr/bin/soga-tool -Ls https://raw.githubusercontent.com/vaxilu/soga/master/soga-tool-${arch}
     chmod +x /usr/bin/soga-tool

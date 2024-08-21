@@ -1,4 +1,5 @@
 #!/bin/sh
+
 red='\033[0;31m'
 green='\033[0;32m'
 yellow='\033[0;33m'
@@ -6,17 +7,17 @@ plain='\033[0m'
 
 cur_dir=$(pwd)
 
-# check root
+# Check root
 if [ "$EUID" -ne 0 ]; then
     echo -e "${red}错误：${plain} 必须使用root用户运行此脚本！\n"
     exit 1
 fi
 
-# check os
+# Check OS
 if grep -Eqi "alpine" /etc/issue || grep -Eqi "alpine" /proc/version; then
     release="alpine"
 else
-    echo -e "${red}未检测到系统版本或系统不支持，请联系脚本作者！${plain}\n"
+    echo -e "${red}未检测到Alpine系统，请联系脚本作者！${plain}\n"
     exit 1
 fi
 
@@ -33,32 +34,21 @@ fi
 
 echo "架构: ${arch}"
 
-if [ "$(getconf WORD_BIT)" != '32' ] && [ "$(getconf LONG_BIT)" != '64' ]; then
+if [ "$(getconf WORD_BIT)" != '32' ] && [ "$(getconf LONG_BIT)" != '64' ] ; then
     echo "本软件不支持 32 位系统(x86)，请使用 64 位系统(x86_64)，如果检测有误，请联系作者"
     exit 2
 fi
 
-is_cmd_exist() {
-    local cmd="$1"
-    if [ -z "$cmd" ]; then
-        return 1
-    fi
-
-    command -v "$cmd" > /dev/null 2>&1
-    return $?
-}
-
 install_base() {
     apk update
-    apk add wget curl tar tzdata socat bash openrc
+    apk add wget curl tar openrc socat tzdata
 }
 
 check_status() {
-    if [ ! -f /etc/init.d/soga ]; then
+    if ! rc-service soga status > /dev/null 2>&1; then
         return 2
     fi
-    status=$(rc-service soga status | grep "status:" | awk '{print $3}')
-    if [ "$status" = "started" ]; then
+    if rc-service soga status | grep -q "running"; then
         return 0
     else
         return 1
@@ -100,35 +90,10 @@ install_soga() {
     chmod +x soga
     last_version="$(./soga -v)"
     mkdir -p /etc/soga/
-
-    # 创建适用于 OpenRC 的初始化脚本
-    cat > /etc/init.d/soga <<-EOF
-#!/sbin/openrc-run
-description="Soga Service"
-
-command="/usr/local/soga/soga"
-command_args=""
-
-pidfile="/var/run/soga.pid"
-command_background="yes"
-
-depend() {
-    need net
-    after firewall
-}
-
-start_pre() {
-    if [ -L /var/run ]; then
-        echo "警告: /var/run 是一个符号链接，可能会导致问题"
-    else
-        checkpath --directory /var/run
-    fi
-}
-EOF
-
+    rm /etc/init.d/soga -f
+    cp -f soga.init /etc/init.d/soga
     chmod +x /etc/init.d/soga
     rc-update add soga default
-
     echo -e "${green}soga v${last_version}${plain} 安装完成，已设置开机自启"
     if [ ! -f /etc/soga/soga.conf ]; then
         cp soga.conf /etc/soga/
@@ -140,7 +105,7 @@ EOF
         check_status
         echo -e ""
         if [ $? -eq 0 ]; then
-            echo -e "${green}soga 启动成功${plain}"
+            echo -e "${green}soga 重启成功${plain}"
         else
             echo -e "${red}soga 可能启动失败，请稍后使用 soga log 查看日志信息${plain}"
         fi
@@ -155,7 +120,7 @@ EOF
     if [ ! -f /etc/soga/routes.toml ]; then
         cp routes.toml /etc/soga/
     fi
-    curl -o /usr/bin/soga -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/soga.sh
+    curl -o /usr/bin/soga -Ls https://raw.githubusercontent.com/vaxilu/soga/master/soga.sh
     chmod +x /usr/bin/soga
     curl -o /usr/bin/soga-tool -Ls https://raw.githubusercontent.com/vaxilu/soga/master/soga-tool-${arch}
     chmod +x /usr/bin/soga-tool
@@ -171,16 +136,4 @@ EOF
     echo "soga disable            - 取消 soga 开机自启"
     echo "soga log                - 查看 soga 日志"
     echo "soga update             - 更新 soga"
-    echo "soga update x.x.x       - 更新 soga 指定版本"
-    echo "soga config             - 显示配置文件内容"
-    echo "soga config xx=xx yy=yy - 自动设置配置文件"
-    echo "soga install            - 安装 soga"
-    echo "soga uninstall          - 卸载 soga"
-    echo "soga version            - 查看 soga 版本"
-    echo "------------------------------------------"
-}
-
-echo -e "${green}开始安装${plain}"
-install_base
-install_acme
-install_soga $1
+    echo "soga update

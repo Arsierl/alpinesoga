@@ -29,17 +29,16 @@ confirm() {
     echo && read -p "$prompt [默认$default]: " reply
     reply="${reply:-$default}"
 
-    if [[ $reply =~ ^[Yy]$ ]]; then
-        return 0
-    else
-        return 1
-    fi
+    [[ $reply =~ ^[Yy]$ ]] && return 0 || return 1
 }
 
 install() {
     bash <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh)
     if [[ $? -eq 0 ]]; then
         start
+    else
+        echo -e "${red}安装失败，请检查错误信息！${plain}"
+        exit 1
     fi
 }
 
@@ -47,11 +46,14 @@ update() {
     read -p "输入指定版本(默认最新版): " version
     version="${version:-latest}"
 
-    bash <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh) $version
+    bash <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh) "$version"
 
     if [[ $? -eq 0 ]]; then
         echo -e "${green}更新完成，已自动重启 soga，请使用 soga log 查看运行日志${plain}"
-        exit
+        exit 0
+    else
+        echo -e "${red}更新失败，请检查错误信息！${plain}"
+        exit 1
     fi
 }
 
@@ -63,15 +65,17 @@ uninstall() {
     if confirm "确定要卸载 soga 吗?" "n"; then
         rc-service soga stop
         rc-update del soga
-        rm /etc/init.d/soga -f
+        rm -f /etc/init.d/soga
         rm -rf /etc/soga/ /usr/local/soga/
         echo -e "${green}卸载成功${plain}"
+    else
+        echo -e "${yellow}卸载已取消${plain}"
     fi
 }
 
 start() {
     rc-service soga start
-    if rc-service soga status | grep -q "started"; then
+    if check_status; then
         echo -e "${green}soga 启动成功${plain}"
     else
         echo -e "${red}soga 启动失败${plain}"
@@ -80,7 +84,7 @@ start() {
 
 stop() {
     rc-service soga stop
-    if ! rc-service soga status | grep -q "started"; then
+    if ! check_status; then
         echo -e "${green}soga 停止成功${plain}"
     else
         echo -e "${red}soga 停止失败${plain}"
@@ -89,7 +93,7 @@ stop() {
 
 restart() {
     rc-service soga restart
-    if rc-service soga status | grep -q "started"; then
+    if check_status; then
         echo -e "${green}soga 重启成功${plain}"
     else
         echo -e "${red}soga 重启失败${plain}"
@@ -115,7 +119,11 @@ disable() {
 }
 
 show_log() {
-    tail -f /var/log/soga.log
+    if [[ -f /var/log/soga.log ]]; then
+        tail -f /var/log/soga.log
+    else
+        echo -e "${red}日志文件 /var/log/soga.log 不存在${plain}"
+    fi
 }
 
 update_shell() {
@@ -130,11 +138,7 @@ update_shell() {
 }
 
 check_status() {
-    if ! rc-service soga status | grep -q "started"; then
-        return 1
-    else
-        return 0
-    fi
+    rc-service soga status | grep -q "started"
 }
 
 show_status() {
@@ -144,7 +148,7 @@ show_status() {
         echo -e "soga状态: ${red}未运行${plain}"
     fi
 
-    if rc-update | grep -q "soga"; then
+    if rc-update show | grep -q "soga"; then
         echo -e "是否开机自启: ${green}是${plain}"
     else
         echo -e "是否开机自启: ${red}否${plain}"

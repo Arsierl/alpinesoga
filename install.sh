@@ -22,9 +22,9 @@ fi
 
 arch=$(arch)
 
-if [[ "$arch" == "x86_64" || "$arch" == "x64" || "$arch" == "amd64" ]]; then
+if [ "$arch" = "x86_64" ] || [ "$arch" = "x64" ] || [ "$arch" = "amd64" ]; then
     arch="amd64"
-elif [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
+elif [ "$arch" = "aarch64" ] || [ "$arch" = "arm64" ]; then
     arch="arm64"
 else
     arch="amd64"
@@ -54,11 +54,11 @@ install_base() {
 }
 
 check_status() {
-    if [[ ! -f /etc/init.d/soga ]]; then
+    if [ ! -f /etc/init.d/soga ]; then
         return 2
     fi
     status=$(rc-service soga status | grep "status:" | awk '{print $3}')
-    if [[ "$status" == "started" ]]; then
+    if [ "$status" = "started" ]; then
         return 0
     else
         return 1
@@ -72,14 +72,14 @@ install_acme() {
 
 install_soga() {
     cd /usr/local/
-    if [[ -e /usr/local/soga/ ]]; then
+    if [ -e /usr/local/soga/ ]; then
         rm /usr/local/soga/ -rf
     fi
 
-    if [ $# == 0 ]; then
+    if [ $# -eq 0 ]; then
         echo -e "开始安装 soga 最新版"
         wget -N --no-check-certificate -O /usr/local/soga.tar.gz https://github.com/vaxilu/soga/releases/latest/download/soga-linux-${arch}.tar.gz
-        if [[ $? -ne 0 ]]; then
+        if [ $? -ne 0 ]; then
             echo -e "${red}下载 soga 失败，请确保你的服务器能够下载 Github 的文件${plain}"
             exit 1
         fi
@@ -88,7 +88,7 @@ install_soga() {
         url="https://github.com/vaxilu/soga/releases/download/${last_version}/soga-linux-${arch}.tar.gz"
         echo -e "开始安装 soga v$1"
         wget -N --no-check-certificate -O /usr/local/soga.tar.gz ${url}
-        if [[ $? -ne 0 ]]; then
+        if [ $? -ne 0 ]; then
             echo -e "${red}下载 soga v$1 失败，请确保此版本存在${plain}"
             exit 1
         fi
@@ -118,7 +118,11 @@ depend() {
 }
 
 start_pre() {
-    checkpath --directory /var/run
+    if [ -L /var/run ]; then
+        echo "警告: /var/run 是一个符号链接，可能会导致问题"
+    else
+        checkpath --directory /var/run
+    fi
 }
 EOF
 
@@ -126,7 +130,7 @@ EOF
     rc-update add soga default
 
     echo -e "${green}soga v${last_version}${plain} 安装完成，已设置开机自启"
-    if [[ ! -f /etc/soga/soga.conf ]]; then
+    if [ ! -f /etc/soga/soga.conf ]; then
         cp soga.conf /etc/soga/
         echo -e ""
         echo -e "全新安装，请先配置必要的内容"
@@ -135,20 +139,20 @@ EOF
         sleep 2
         check_status
         echo -e ""
-        if [[ $? == 0 ]]; then
+        if [ $? -eq 0 ]; then
             echo -e "${green}soga 启动成功${plain}"
         else
             echo -e "${red}soga 可能启动失败，请稍后使用 soga log 查看日志信息${plain}"
         fi
     fi
 
-    if [[ ! -f /etc/soga/blockList ]]; then
+    if [ ! -f /etc/soga/blockList ]; then
         cp blockList /etc/soga/
     fi
-    if [[ ! -f /etc/soga/dns.yml ]]; then
+    if [ ! -f /etc/soga/dns.yml ]; then
         cp dns.yml /etc/soga/
     fi
-    if [[ ! -f /etc/soga/routes.toml ]]; then
+    if [ ! -f /etc/soga/routes.toml ]; then
         cp routes.toml /etc/soga/
     fi
     curl -o /usr/bin/soga -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/soga.sh

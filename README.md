@@ -7,3 +7,7 @@
 若有问题欢迎提交issues反馈
 
 本项目基于 https://github.com/vaxilu/soga 进行二次开发
+
+一键安装命令
+
+```bash <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh)```

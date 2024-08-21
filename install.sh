@@ -136,3 +136,16 @@ install_soga() {
     echo "soga disable            - 取消 soga 开机自启"
     echo "soga log                - 查看 soga 日志"
     echo "soga update             - 更新 soga"
+    echo "soga update x.x.x       - 更新 soga 指定版本"
+    echo "soga config             - 显示配置文件内容"
+    echo "soga config xx=xx yy=yy - 自动设置配置文件"
+    echo "soga install            - 安装 soga"
+    echo "soga uninstall          - 卸载 soga"
+    echo "soga version            - 查看 soga 版本"
+    echo "------------------------------------------"
+}
+
+echo -e "${green}开始安装${plain}"
+install_base
+install_acme
+install_soga $1

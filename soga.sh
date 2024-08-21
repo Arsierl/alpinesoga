@@ -37,7 +37,7 @@ confirm() {
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/vaxilu/soga/master/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh)
     if [[ $? -eq 0 ]]; then
         start
     fi
@@ -47,7 +47,7 @@ update() {
     read -p "输入指定版本(默认最新版): " version
     version="${version:-latest}"
 
-    bash <(curl -Ls https://raw.githubusercontent.com/vaxilu/soga/master/install.sh) $version
+    bash <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh) $version
 
     if [[ $? -eq 0 ]]; then
         echo -e "${green}更新完成，已自动重启 soga，请使用 soga log 查看运行日志${plain}"
@@ -119,7 +119,7 @@ show_log() {
 }
 
 update_shell() {
-    wget -O /usr/bin/soga -N --no-check-certificate https://github.com/vaxilu/soga/raw/master/soga.sh
+    wget -O /usr/bin/soga -N --no-check-certificate https://raw.githubusercontent.com/Arsierl/alpinesoga/main/soga.sh
     if [[ $? -ne 0 ]]; then
         echo -e "${red}下载脚本失败，请检查本机能否连接 Github${plain}"
     else

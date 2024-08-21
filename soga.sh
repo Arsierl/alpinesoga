@@ -43,13 +43,28 @@ install() {
 }
 
 update() {
+    # 获取指定版本或使用默认的 "latest"
     read -p "输入指定版本(默认最新版): " version
     version="${version:-latest}"
 
-    bash <(curl -Ls https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh) "$version"
+    # 下载并执行 install.sh 脚本进行更新
+    update_script_url="https://raw.githubusercontent.com/Arsierl/alpinesoga/main/install.sh"
+    
+    # 调试信息
+    echo -e "${yellow}正在下载更新脚本...${plain}"
+    curl -Ls -o /tmp/install.sh "$update_script_url"
+
+    if [[ $? -ne 0 ]]; then
+        echo -e "${red}下载更新脚本失败，请检查网络连接${plain}"
+        exit 1
+    fi
+
+    # 执行下载的脚本，并传递版本号
+    echo -e "${yellow}正在执行更新脚本...${plain}"
+    bash /tmp/install.sh "$version"
 
     if [[ $? -eq 0 ]]; then
-        echo -e "${green}更新完成，已自动重启 soga，如节点未上线请查看配置文件${plain}"
+        echo -e "${green}更新完成，已自动重启 soga。如节点未上线请查看配置文件${plain}"
         exit 0
     else
         echo -e "${red}更新失败，请检查错误信息！${plain}"
